@@ -91,13 +91,14 @@ publicadas: não é possível inferir os valores ausentes sem inventar informaç
 
 ### Etapa 3 — Visualização e interpretação (`etapa_3`)
 
-Gera três gráficos e imprime uma interpretação curta de cada um:
+Gera quatro gráficos e imprime uma interpretação curta de cada um:
 
 | Função | Figura gerada | Pergunta |
 |---|---|---|
 | `grafico_cromossomos` | `figuras/01_cromossomos.png` | Como as associações se distribuem entre os cromossomos? |
 | `grafico_genes` | `figuras/02_genes.png` | Quais genes aparecem com mais frequência nas associações? |
 | `grafico_beta_cromossomo` | `figuras/03_beta_por_cromossomo.png` | Qual é o beta mediano por cromossomo? |
+| `grafico_beta_boxplot_cromossomo` | `figuras/04_beta_boxplot_cromossomos.png` | Como o beta se distribui em cada cromossomo e onde estão os outliers? |
 
 Funções auxiliares usadas nessa etapa:
 
@@ -110,9 +111,11 @@ Funções auxiliares usadas nessa etapa:
 - `_valor_ausente` e `_valor_canonico` — normalizam a detecção e a comparação de
   valores ausentes e de listas/dicionários.
 
-O gráfico de beta usa apenas as associações cujo campo `beta` está no formato
+Os gráficos de beta usam apenas as associações cujo campo `beta` está no formato
 textual com número, direção (`increase`/`decrease`) e unidade. Os demais valores
-(por exemplo, `"-"` ou `"NR"`) são descartados dessa figura.
+(por exemplo, `"-"` ou `"NR"`) são descartados dessas figuras. O boxplot por
+cromossomo (04) exibe apenas grupos com `n >= 3` e usa escala `symlog` para
+tornar visíveis os outliers sem comprimir as caixas.
 
 ## Painel de funções
 
@@ -120,11 +123,93 @@ textual com número, direção (`increase`/`decrease`) e unidade. Os demais valo
 |---|---|---|
 | `etapa_1()` | — | `DataFrame` normalizado. |
 | `etapa_2(df)` | `DataFrame` da Etapa 1 | Cópia sem colunas vazias/constantes. |
-| `etapa_3(df)` | `DataFrame` da Etapa 2 | Gera os três gráficos e imprime interpretações. |
+| `etapa_3(df)` | `DataFrame` da Etapa 2 | Gera os quatro gráficos e imprime interpretações. |
 | `identificar_colunas_sem_variancia(df)` | `DataFrame` | Tupla `(colunas_vazias, colunas_constantes)`. |
 | `grafico_cromossomos(df)` | `DataFrame` | Salva `01_cromossomos.png`. |
 | `grafico_genes(df)` | `DataFrame` | Salva `02_genes.png`. |
 | `grafico_beta_cromossomo(df)` | `DataFrame` | Salva `03_beta_por_cromossomo.png`. |
+| `grafico_beta_boxplot_cromossomo(df, min_n=3)` | `DataFrame` | Salva `04_beta_boxplot_cromossomos.png`. |
+
+## Gráficos gerados e interpretação
+
+Esta seção apresenta os gráficos produzidos pelo script, o motivo de cada
+visualização e as informações que podem ser obtidas a partir delas.
+
+### 1. Distribuição das associações por cromossomo (`01_cromossomos.png`)
+
+![Distribuição das associações por cromossomo](figuras/01_cromossomos.png)
+
+**Por que usar este gráfico:** o gráfico de barras permite comparar diretamente
+a contagem de associações entre categorias (cromossomos), evidenciando
+concentrações e ausências de forma imediata.
+
+**Informações que podemos obter:**
+- Quais cromossomos concentram mais associações reportadas para fibromialgia.
+- A distribuição geral das associações ao longo do genoma (1–22, X, Y, MT).
+- Quantas associações possuem localização cromossômica informada e quantas não
+  têm localização (`locations` ausente), o que ajuda a dimensionar a cobertura
+  espacial dos dados.
+
+### 2. Genes mais frequentes nas associações (`02_genes.png`)
+
+![Genes mais frequentes nas associações](figuras/02_genes.png)
+
+**Por que usar este gráfico:** o gráfico de barras horizontais é adequado para
+comparar muitos rótulos textuais (nomes de genes), facilitando a leitura dos
+mais frequentes sem sobreposição de labels.
+
+**Informações que podemos obter:**
+- Quais genes aparecem com maior recorrência nas associações mapeadas.
+- A diversidade de genes envolvidos (genes únicos versus total de ocorrências),
+  considerando que uma associação pode mapear para mais de um gene.
+- Possíveis genes/loci prioritários para investigação, lembrando que frequência
+  de associação não implica causalidade nem relevância clínica isolada.
+
+### 3. Beta mediano por cromossomo (`03_beta_por_cromossomo.png`)
+
+![Beta mediano por cromossomo](figuras/03_beta_por_cromossomo.png)
+
+**Por que usar este gráfico:** o gráfico de linha com marcadores resume, por
+cromossomo, a tendência central (mediana) do efeito estimado (`beta`) e inclui
+o tamanho amostral (`n`) em cada ponto, oferecendo uma visão agregada do sinal
+e da direção do efeito.
+
+**Informações que podemos obter:**
+- A direção predominante do efeito em cada cromossomo (`increase` > 0,
+  `decrease` < 0, em relação ao alelo/escala reportados).
+- Em quais cromossomos o beta mediano absoluto é maior.
+- Quantas associações com beta numérico parseável sustentam cada mediana
+  (anotações `n`), o que contextualiza a robustez do resumo.
+
+### 4. Distribuição do beta por cromossomo (`04_beta_boxplot_cromossomos.png`)
+
+![Distribuição do beta por cromossomo](figuras/04_beta_boxplot_cromossomos.png)
+
+**Por que usar este gráfico:** o boxplot expõe a distribuição completa do beta
+em cada cromossomo (mediana, dispersão e amplitude), enquanto a sobreposição
+dos pontos individuais com jitter torna visíveis todos os valores — algo que a
+mediana isolada (gráfico 03) não mostra. A escala `symlog` (`linthresh=0.01`)
+evita que outliers extremos comprimam as caixas, preservando a leitura dos
+demais grupos.
+
+**Informações que podemos obter:**
+- A variabilidade e a dispersão dos betas dentro de cada cromossomo, e não
+  apenas sua tendência central.
+- A presença de outliers e valores atípicos; em particular, no cromossomo 6 há
+  dois valores idênticos de `beta = 0.778` (acessos `GCST90998899` e
+  `GCST90998897`) reportados em dois accessions distintos, que não devem ser
+  interpretados como evidência independente.
+- A distribuição real quando `n` é pequeno (os pontos individuais deixam isso
+  explícito).
+- Comparação honesta entre cromossomos com amostra suficiente: são exibidos
+  apenas cromossomos com `n >= 3`, com indicação de quantos grupos/linhas foram
+  excluídos por amostra insuficiente.
+
+**Limitação específica desta visualização:** os betas são adimensionais
+(dependem da unidade/escala de cada estudo) e, neste recorte, todos os betas
+parseáveis provêm de uma única publicação; portanto, diferenças entre
+cromossomos não devem ser interpretadas como comparações de magnitude clínica
+direta.
 
 ## Referência dos dados: `dicionario_api_gwas.md`
 

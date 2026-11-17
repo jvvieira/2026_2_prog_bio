@@ -364,13 +364,142 @@ def grafico_beta_cromossomo(df):
     )
 
 
+def grafico_beta_boxplot_cromossomo(df, min_n=3):
+    """Gráfico 4: boxplot da distribuição do beta por cromossomo."""
+    print("\n--- Gráfico 4: boxplot do beta por cromossomo ---")
+
+    import numpy as np
+
+    colunas = ["_cromossome", "beta", "accession_id", "association_id"]
+    colunas = [c for c in colunas if c in df.columns]
+    dados = df[colunas].copy()
+    dados["beta_num"] = dados["beta"].map(_beta_com_sinal)
+    dados = dados[dados["beta_num"].notna() & dados["_cromossome"].notna()].copy()
+    dados["_cromossome"] = dados["_cromossome"].astype(str).str.strip()
+    dados = dados[dados["_cromossome"] != ""]
+
+    total_parseavel = int(dados["beta_num"].notna().sum())
+    contagens = dados.groupby("_cromossome").size()
+    cromossomos_todos = _ordenar_cromossomos(contagens.index)
+    cromossomos_excluidos = [c for c in cromossomos_todos if contagens[c] < min_n]
+    cromossomos_mantidos = [c for c in cromossomos_todos if contagens[c] >= min_n]
+
+    linhas_excluidas = int(contagens[contagens < min_n].sum())
+    dados_plot = dados[dados["_cromossome"].isin(cromossomos_mantidos)].copy()
+
+    print(
+        f"Associações com beta numérico (parseável): {total_parseavel}. "
+        f"Cromossomos exibidos (n >= {min_n}): {len(cromossomos_mantidos)}; "
+        f"cromossomos excluídos por n < {min_n}: {cromossomos_excluidos} "
+        f"({linhas_excluidas} linhas excluídas)."
+    )
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+    posicoes = list(range(len(cromossomos_mantidos)))
+    grupos = [
+        dados_plot.loc[dados_plot["_cromossome"] == c, "beta_num"].values
+        for c in cromossomos_mantidos
+    ]
+
+    ax.boxplot(
+        grupos,
+        positions=posicoes,
+        widths=0.6,
+        patch_artist=True,
+        boxprops=dict(facecolor="#4C72B0", alpha=0.35, color="#4C72B0"),
+        medianprops=dict(color="#2c4f7c", linewidth=2),
+        whiskerprops=dict(color="#4C72B0"),
+        capprops=dict(color="#4C72B0"),
+        flierprops=dict(marker="", linestyle="none"),
+    )
+
+    rng = np.random.default_rng(42)
+    for posicao, cromossomo in zip(posicoes, cromossomos_mantidos):
+        grupo = dados_plot[dados_plot["_cromossome"] == cromossomo]
+        valores = grupo["beta_num"].values
+        jitter = rng.uniform(-0.12, 0.12, size=len(valores))
+        ax.scatter(
+            np.full(len(valores), posicao) + jitter,
+            valores,
+            color="#4C72B0",
+            s=28,
+            alpha=0.8,
+            zorder=3,
+            edgecolor="white",
+            linewidth=0.4,
+        )
+
+    # Anotação de n por cromossomo
+    y_min, y_max = ax.get_ylim()
+    for posicao, cromossomo in zip(posicoes, cromossomos_mantidos):
+        n = contagens[cromossomo]
+        ax.text(
+            posicao,
+            1.02,
+            f"n={int(n)}",
+            transform=ax.get_xaxis_transform(),
+            ha="center",
+            va="bottom",
+            fontsize=8,
+        )
+
+    # Anotar os dois pontos 0.778 no cromossomo 6 com seus accession IDs
+    if "6" in cromossomos_mantidos and "accession_id" in dados_plot.columns:
+        idx_chr6 = cromossomos_mantidos.index("6")
+        outliers_chr6 = dados_plot[
+            (dados_plot["_cromossome"] == "6") & (dados_plot["beta_num"] == 0.778)
+        ]
+        deslocamentos = [(10, 8), (10, -14)]
+        for (i, (_, linha)), (dx, dy) in zip(
+            enumerate(outliers_chr6.iterrows()), deslocamentos
+        ):
+            acc = linha.get("accession_id", "")
+            ax.annotate(
+                str(acc),
+                (idx_chr6, linha["beta_num"]),
+                textcoords="offset points",
+                xytext=(dx, dy),
+                fontsize=8,
+                color="#8B0000",
+                arrowprops=dict(arrowstyle="-", color="#8B0000", lw=0.8),
+            )
+
+    ax.axhline(0, color="black", linestyle="--", linewidth=1, label="Beta = 0")
+    ax.set_yscale("symlog", linthresh=0.01)
+    ax.set_xticks(posicoes)
+    ax.set_xticklabels(cromossomos_mantidos)
+    ax.set_title("Distribuição do beta por cromossomo")
+    ax.set_xlabel("Cromossomo")
+    ax.set_ylabel("Beta (increase > 0, decrease < 0)")
+    ax.legend()
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    fig.tight_layout()
+
+    _salvar_grafico(fig, "04_beta_boxplot_cromossomos.png")
+
+    print(
+        "Interpretação: "
+        f"{total_parseavel} associações possuem beta numérico parseável; "
+        f"o boxplot exibe {len(cromossomos_mantidos)} cromossomos com n >= {min_n}, "
+        f"excluindo {linhas_excluidas} linhas de {len(cromossomos_excluidos)} "
+        f"cromossomos com n < {min_n}. "
+        "No cromossomo 6 aparecem dois valores idênticos de beta = 0.778 "
+        "(GCST90998899 e GCST90998897), reportados em dois accessions distintos, "
+        "portanto não devem ser interpretados como evidência independente. "
+        "Limitação: o beta é adimensional (depende da unidade/escala do estudo) "
+        "e todos os betas parseáveis provêm de uma única publicação."
+    )
+
+
 def etapa_3(df):
-    """Etapa 3: produzir os três gráficos e imprimir uma interpretação curta."""
+    """Etapa 3: produzir os gráficos e imprimir uma interpretação curta."""
     print("\n--- Etapa 3: visualização e interpretação ---")
 
     grafico_cromossomos(df)
     grafico_genes(df)
     grafico_beta_cromossomo(df)
+    grafico_beta_boxplot_cromossomo(df)
 
 
 if __name__ == "__main__":
