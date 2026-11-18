@@ -1,5 +1,11 @@
 # Trabalho final — Associações genéticas da fibromialgia (GWAS Catalog)
 
+## Integrantes do Grupo
+
+**João Victor Rossetti Vieira** (RA 202630554)
+
+**Viviane Cristina Tavares Gallinucci Osorio** (RA 202652195) 
+
 Análise exploratória das associações genéticas de **fibromialgia** (`MONDO_0005546`)
 publicadas no [GWAS Catalog](https://www.ebi.ac.uk/gwas/efotraits/MONDO_0005546),
 usando a API REST v2 como fonte de dados.

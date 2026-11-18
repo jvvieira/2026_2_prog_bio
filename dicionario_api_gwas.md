@@ -1,11 +1,5 @@
 # Dicionário de dados — GWAS Catalog API v2
 
-## Integrantes do Grupo
-
-**João Victor Rossetti Vieira** (RA 202630554)
-
-**Viviane** 
-
 ##
 **Fonte:** [GWAS Catalog REST API v2](https://www.ebi.ac.uk/gwas/rest/api/v2/docs)  
 **Traço consultado:** fibromialgia (`MONDO_0005546`)  
