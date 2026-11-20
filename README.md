@@ -2,7 +2,7 @@
 
 **Programação e Análise de Dados em Saúde**
 
-Docente: **Prof Lucas Miguel**
+Docente: **Prof. Lucas Miguel de Carvalho**
 
 Discentes: 
 - **João Victor Rossetti Vieira** (RA 202630554)
