@@ -85,6 +85,27 @@
 13. **`reported_trait = "Fibromyalgia (MTAG)"`** indica resultado de *Multi-Trait Analysis of GWAS*, não uma coorte independente.
 14. **A consulta por `efo_trait=fibromyalgia` funciona**, mas para o termo exato é mais preciso usar `efo_id=MONDO_0005546`. A consulta `efo_trait=MONDO_0005546` retorna 0 resultados.
 
+## Sobre o beta
+
+### O que representa o Coeficiente $\beta$ em GWAS?
+- **Magnitude e Direção do Efeito:** Enquanto o valor-$p$ ($p$-value) mede apenas a significância estatística (a probabilidade de a associação ser fruto do acaso), o $\beta$ quantifica a força e a direção do impacto biológico daquela variação genética em relação ao alelo de efeito (effect allele).
+- **Em Traços Contínuos (Regressão Linear):** O $\beta$ reflete a mudança média no valor numérico do fenótipo para cada cópia adicional do alelo testado.
+   - $\beta > 0$: Cada cópia do alelo aumenta o valor do fenótipo nessa quantidade.
+   - $\beta < 0$: Cada cópia do alelo reduz o valor do fenótipo.
+- **Em Doenças / Casos-Controle (Regressão Logística):** O $\beta$ equivale ao logaritmo natural da razão de chances ($\ln(OR)$):
+   - $\beta > 0 \implies OR > 1$: O alelo está associado a um aumento de chance/risco de desenvolver a condição.
+   - $\beta < 0 \implies OR < 1$: O alelo está associado a uma redução de chance (efeito protetor).
+   - $\beta = 0 \implies OR = 1$: Não há efeito do alelo sobre a condição.
+
+### Como o $\beta$ é aplicado no projeto do seu repositório?
+Com base na documentação e no script do seu repositório:
+1. **Conversão dos Dados brutos da API:** A API do GWAS Catalog fornece os dados de efeito em formato de texto (por exemplo, "0.06 unit increase" ou "0.06 unit decrease").
+2. **Tratamento no Python:** A função _beta_com_sinal() converte essas strings em valores numéricos signed ($+0.06$ para increase e $-0.06$ para decrease), permitindo cálculos estatísticos e plotagem.
+3. **Visualizações Gráficas:** 
+   - Gráfico 03 (03_beta_por_cromossomo.png): Mostra a mediana do $\beta$ por cromossomo para resumir a tendência central do efeito genético ao longo do genoma.
+   - Gráfico 04 (04_beta_boxplot_cromossomos.png): Exibe a distribuição completa e a dispersão dos valores de $\beta$, destacando a variabilidade e eventuais outliers.
+4. **Ressalva Metodológica:** A documentação do seu projeto destaca que a direção do $\beta$ depende de qual alelo foi reportado pelo estudo e que os valores não devem ser interpretados diretamente como risco clínico isolado sem considerar o contexto experimental.
+
 ## Links úteis
 
 - **Swagger UI / API Reference:** https://www.ebi.ac.uk/gwas/rest/api/v2/docs/reference
