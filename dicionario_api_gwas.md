@@ -102,8 +102,8 @@ Com base na documentação e no script do seu repositório:
 1. **Conversão dos Dados brutos da API:** A API do GWAS Catalog fornece os dados de efeito em formato de texto (por exemplo, "0.06 unit increase" ou "0.06 unit decrease").
 2. **Tratamento no Python:** A função _beta_com_sinal() converte essas strings em valores numéricos signed ($+0.06$ para increase e $-0.06$ para decrease), permitindo cálculos estatísticos e plotagem.
 3. **Visualizações Gráficas:** 
-   - Gráfico 03 (03_beta_por_cromossomo.png): Mostra a mediana do $\beta$ por cromossomo para resumir a tendência central do efeito genético ao longo do genoma.
-   - Gráfico 04 (04_beta_boxplot_cromossomos.png): Exibe a distribuição completa e a dispersão dos valores de $\beta$, destacando a variabilidade e eventuais outliers.
+   - Gráfico 03 (03_beta_por_allele.png): Mostra a média do $\beta$ com sinal por `rs_id` (extraído de `snp_allele`), ordenada pela magnitude da média e em escala `symlog`, com o $n$ de associações anotado em cada barra. O nome do arquivo preserva a convenção antiga.
+   - Gráfico 04 (04_beta_boxplot_cromossomos.png): Exibe a distribuição completa e a dispersão dos valores de $\beta$ por cromossomo, destacando a variabilidade e eventuais outliers (inalterado).
 4. **Ressalva Metodológica:** A documentação do seu projeto destaca que a direção do $\beta$ depende de qual alelo foi reportado pelo estudo e que os valores não devem ser interpretados diretamente como risco clínico isolado sem considerar o contexto experimental.
 
 ## Links úteis

@@ -35,26 +35,134 @@ detalhada de cada campo devolvido pela API está em
 - [`pandas`](https://pandas.pydata.org/)
 - [`matplotlib`](https://matplotlib.org/)
 
-Exemplo de preparação do ambiente:
+As versões já validadas neste projeto são pandas 3.0.6 e matplotlib 3.11.2.
+
+## Como executar — passo a passo
+
+O script abre `data.json` e grava as figuras em `figuras/` por **caminhos
+relativos**. Portanto, execute sempre os comandos a partir da raiz do projeto
+(a pasta que contém `trabalho-final.py`, `data.json` e `requirements.txt`).
+
+### Passo 1 — entre na raiz do projeto
+
+```bash
+cd ~/Fontes/trabalho_final_prog_bio
+```
+
+Confira se está no lugar certo (o comando deve listar `trabalho-final.py`):
+
+```bash
+ls trabalho-final.py data.json requirements.txt
+```
+
+### Passo 2 — escolha um ambiente Python com as bibliotecas instaladas
+
+#### Opção A — usar o ambiente `aula` (já pronto nesta máquina)
+
+É o caminho mais rápido: esse ambiente do pyenv já possui `pandas` e
+`matplotlib`, então não é preciso instalar nada.
+
+1. Teste o ambiente:
+
+   ```bash
+   PYENV_VERSION=aula pyenv exec python -c "import pandas, matplotlib; print('OK')"
+   ```
+
+   A saída deve ser `OK`. Se aparecer `ModuleNotFoundError`, use a Opção B.
+
+2. Execute o script:
+
+   ```bash
+   PYENV_VERSION=aula pyenv exec python trabalho-final.py
+   ```
+
+   O mesmo efeito é obtido com o caminho direto do interpretador:
+
+   ```bash
+   ~/.pyenv/versions/aula/bin/python trabalho-final.py
+   ```
+
+   > Em um shell interativo com `pyenv-virtualenv` carregado, também vale
+   > `pyenv activate aula` seguido de `python trabalho-final.py`. Se o
+   > shell disser que `pyenv activate` não está disponível, prefira o comando
+   > com `PYENV_VERSION` mostrado acima.
+
+#### Opção B — recriar o ambiente `.venv` do projeto
+
+O `.venv` atual está incompleto: não tem `pip`, `pandas` nem `matplotlib`.
+Recrie-o usando um Python do pyenv (o `python3` do sistema não traz `pip`):
+
+1. Crie (ou atualize) o ambiente virtual:
+
+   ```bash
+   PYENV_VERSION=3.13.15 pyenv exec python -m venv .venv
+   ```
+
+2. Ative o ambiente:
+
+   ```bash
+   source .venv/bin/activate
+   ```
+
+   O prompt passa a mostrar `(.venv)`. Para sair depois, use `deactivate`.
+
+3. Instale as dependências do arquivo `requirements.txt`:
+
+   ```bash
+   python -m pip install -r requirements.txt
+   ```
+
+4. Execute o script (ainda com o `.venv` ativado):
+
+   ```bash
+   python trabalho-final.py
+   ```
+
+Em máquinas onde o `python3` já vem com `pip`, os passos 1 e 3 podem ser
+escritos de forma genérica:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install pandas matplotlib
+python -m pip install -r requirements.txt
 ```
 
-## Como executar
+### Passo 3 — acompanhe a saída e confira os resultados
 
-Execute o script a partir da raiz do projeto, pois ele abre `data.json` pelo
-caminho relativo e grava os gráficos em `figuras/`:
+Durante a execução o terminal mostra, nesta ordem:
+
+1. as dimensões e as colunas do DataFrame (`(215, 30)`);
+2. a amostra de linhas com betas numéricos;
+3. o relatório da Etapa 2, com as colunas vazias/constantes removidas
+   (de `(215, 30)` para `(215, 25)`);
+4. a interpretação de cada um dos quatro gráficos da Etapa 3.
+
+Ao final, confirme que os quatro PNGs foram gerados:
 
 ```bash
-python3 trabalho-final.py
+ls -lh figuras/
 ```
 
-O script imprime no terminal as dimensões e colunas do DataFrame, o relatório de
-colunas removidas, a interpretação de cada gráfico e grava as figuras em
-`figuras/`.
+A execução foi bem-sucedida se aparecerem `01_cromossomos.png`,
+`02_genes.png`, `03_beta_por_allele.png` e
+`04_beta_boxplot_cromossomos.png`.
+
+Para testar o agrupamento de betas por alelo (não depende de pandas nem de
+matplotlib):
+
+```bash
+python3 -m unittest discover -v
+```
+
+### Problemas comuns
+
+| Sintoma | Causa provável | Solução |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'pandas'` | O interpretador usado não tem as bibliotecas | Use a Opção A ou instale com a Opção B |
+| `No such file or directory: data.json` | O comando foi rodado fora da raiz do projeto | Volte ao Passo 1 (`cd ~/Fontes/trabalho_final_prog_bio`) |
+| `pyenv: python: command not found` | Nenhuma versão definida para `pyenv exec` | Informe `PYENV_VERSION=aula` (ou `3.13.15`) antes do comando |
+| `pyenv activate' requires Pyenv and Pyenv-Virtualenv...` | O shell não carregou o pyenv-virtualenv | Use `PYENV_VERSION=aula pyenv exec python trabalho-final.py` |
+| `No module named pip` ao criar o `.venv` | O `python3` do sistema não traz `pip` | Crie o venv com `PYENV_VERSION=3.13.15 pyenv exec python -m venv .venv` |
 
 ### Download dos dados
 
@@ -82,7 +190,7 @@ O código é organizado em três etapas sequenciais, executadas em `__main__`.
    `pd.json_normalize`.
 3. Cria três colunas derivadas para facilitar a análise:
    - `_mapped_genes` — genes mapeados unidos em uma única string separada por vírgulas;
-   - `_allele` — `rs_id` do primeiro SNP da lista `snp_allele`;
+   - `_allele` — `effect_allele` do primeiro item da lista `snp_allele` (a letra do alelo, não o `rs_id`);
    - `_cromossome` — cromossomo extraído de `locations` no formato `cromossomo:posição`.
 4. Imprime as dimensões e os nomes das colunas do DataFrame.
 
@@ -106,7 +214,7 @@ Gera quatro gráficos e imprime uma interpretação curta de cada um:
 |---|---|---|
 | `grafico_cromossomos` | `figuras/01_cromossomos.png` | Como as associações se distribuem entre os cromossomos? |
 | `grafico_genes` | `figuras/02_genes.png` | Quais genes aparecem com mais frequência nas associações? |
-| `grafico_beta_cromossomo` | `figuras/03_beta_por_cromossomo.png` | Qual é o beta mediano por cromossomo? |
+| `grafico_beta_allele` | `figuras/03_beta_por_allele.png` | Qual é a média do beta com sinal para cada rs_id? |
 | `grafico_beta_boxplot_cromossomo` | `figuras/04_beta_boxplot_cromossomos.png` | Como o beta se distribui em cada cromossomo e onde estão os outliers? |
 
 Funções auxiliares usadas nessa etapa:
@@ -117,14 +225,21 @@ Funções auxiliares usadas nessa etapa:
   valores inesperados no final;
 - `_beta_com_sinal(valor)` — converte textos como `"0.06 unit increase"` em
   `0.06` e `"0.06 unit decrease"` em `-0.06`;
+- `rs_id_de_snp_allele(valores)` (em `analise_beta.py`) — extrai o `rs_id` do
+  primeiro item de `snp_allele`;
+- `resumo_beta_por_rsid(pares)` (em `analise_beta.py`) — recebe pares
+  `(snp_allele, beta)`, agrupa pelo `rs_id` e devolve `(rs_id, média, n)`
+  ordenado por `|média|`, ignorando SNPs e betas ausentes;
 - `_valor_ausente` e `_valor_canonico` — normalizam a detecção e a comparação de
   valores ausentes e de listas/dicionários.
 
 Os gráficos de beta usam apenas as associações cujo campo `beta` está no formato
 textual com número, direção (`increase`/`decrease`) e unidade. Os demais valores
-(por exemplo, `"-"` ou `"NR"`) são descartados dessas figuras. O boxplot por
-cromossomo (04) exibe apenas grupos com `n >= 3` e usa escala `symlog` para
-tornar visíveis os outliers sem comprimir as caixas.
+(por exemplo, `"-"` ou `"NR"`) são descartados dessas figuras. O gráfico 03
+usa o `rs_id` extraído de `snp_allele` e escala `symlog` para acomodar betas de
+magnitudes muito diferentes; o boxplot por cromossomo (04) exibe apenas grupos
+com `n >= 3` e também usa `symlog` para tornar visíveis os outliers sem
+comprimir as caixas.
 
 ## Painel de funções
 
@@ -136,7 +251,7 @@ tornar visíveis os outliers sem comprimir as caixas.
 | `identificar_colunas_sem_variancia(df)` | `DataFrame` | Tupla `(colunas_vazias, colunas_constantes)`. |
 | `grafico_cromossomos(df)` | `DataFrame` | Salva `01_cromossomos.png`. |
 | `grafico_genes(df)` | `DataFrame` | Salva `02_genes.png`. |
-| `grafico_beta_cromossomo(df)` | `DataFrame` | Salva `03_beta_por_cromossomo.png`. |
+| `grafico_beta_allele(df, top_n=15)` | `DataFrame` | Salva `03_beta_por_allele.png`. |
 | `grafico_beta_boxplot_cromossomo(df, min_n=3)` | `DataFrame` | Salva `04_beta_boxplot_cromossomos.png`. |
 
 ## Gráficos gerados e interpretação
@@ -174,21 +289,26 @@ mais frequentes sem sobreposição de labels.
 - Possíveis genes/loci prioritários para investigação, lembrando que frequência
   de associação não implica causalidade nem relevância clínica isolada.
 
-### 3. Beta mediano por cromossomo (`03_beta_por_cromossomo.png`)
+### 3. Média do beta por rs_id (`03_beta_por_allele.png`)
 
-![Beta mediano por cromossomo](figuras/03_beta_por_cromossomo.png)
+![Média do beta por rs_id](figuras/03_beta_por_allele.png)
 
-**Por que usar este gráfico:** o gráfico de linha com marcadores resume, por
-cromossomo, a tendência central (mediana) do efeito estimado (`beta`) e inclui
-o tamanho amostral (`n`) em cada ponto, oferecendo uma visão agregada do sinal
-e da direção do efeito.
+**Por que usar este gráfico:** as barras horizontais mostram a média do beta
+com sinal para cada `rs_id` (o identificador do SNP em `snp_allele`), ordenada
+pela magnitude da média. A cor distingue `increase` (azul) de `decrease`
+(vermelho), e a escala `symlog` (`linthresh=0.01`) permite ver simultaneamente
+efeitos pequenos e atípicos. Cada barra traz o valor e o número de associações
+(`n`). O nome do arquivo mantém a convenção antiga (`allele`), mas o agrupamento
+é por `rs_id`.
 
 **Informações que podemos obter:**
-- A direção predominante do efeito em cada cromossomo (`increase` > 0,
-  `decrease` < 0, em relação ao alelo/escala reportados).
-- Em quais cromossomos o beta mediano absoluto é maior.
-- Quantas associações com beta numérico parseável sustentam cada mediana
-  (anotações `n`), o que contextualiza a robustez do resumo.
+- Quais SNPs concentram as maiores magnitudes médias de beta.
+- A direção do efeito em relação ao alelo reportado (`increase` > 0,
+  `decrease` < 0) — o sinal depende de qual alelo o estudo escolheu como
+  *effect allele* e não indica, por si só, maior ou menor risco clínico.
+- Quantas associações sustentam cada média (anotações `n`). No recorte atual
+  há 63 `rs_id` distintos para 71 associações com beta parseável; a maioria
+  aparece uma única vez, então essas médias são exploratórias.
 
 ### 4. Distribuição do beta por cromossomo (`04_beta_boxplot_cromossomos.png`)
 

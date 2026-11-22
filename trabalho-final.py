@@ -9,6 +9,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 
+from analise_beta import ROTULOS_GRAFICO_3, resumo_beta_por_rsid
+
 
 
 #### Base de dados 
@@ -39,7 +41,7 @@ def etapa_1():
     # Normalização da base de dados, para facilitar a análise e manipulação dos dados. A normalização envolve a transformação dos dados em um formato tabular, onde cada linha representa uma associação genética e cada coluna representa uma característica ou atributo dessa associação.
     df['_mapped_genes'] = df['mapped_genes'].str.join(', ')
     df['_allele'] = df['snp_allele'].map(
-        lambda valores: valores[0]['rs_id']
+        lambda valores: valores[0]['effect_allele']
         if isinstance(valores, list) and len(valores) > 0
         else None
     )
@@ -299,68 +301,71 @@ def _beta_com_sinal(valor):
     return numero if encontrado.group(2) == "increase" else -numero
 
 
-def grafico_beta_cromossomo(df):
-    """Gráfico 3: beta mediano por cromossomo."""
-    print("\n--- Gráfico 3: beta mediano por cromossomo ---")
+def grafico_beta_allele(df, top_n=15):
+    """Gráfico 3: média do beta com sinal por rs_id, em escala symlog."""
+    print("\n--- Gráfico 3: média do beta por rs_id ---")
 
-    dados = df[["_cromossome", "beta"]].copy()
+    colunas = [c for c in ["snp_allele", "beta"] if c in df.columns]
+    dados = df[colunas].copy()
     dados["beta_num"] = dados["beta"].map(_beta_com_sinal)
-    dados = dados[dados["beta_num"].notna() & dados["_cromossome"].notna()].copy()
-    dados["_cromossome"] = dados["_cromossome"].astype(str).str.strip()
-    dados = dados[dados["_cromossome"] != ""]
 
-    resumo = dados.groupby("_cromossome")["beta_num"].agg(["median", "count"])
-    resumo = resumo.reindex(_ordenar_cromossomos(resumo.index))
+    pares = zip(dados["snp_allele"], dados["beta_num"])
+    resumo_completo = resumo_beta_por_rsid(pares)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
-    posicoes = range(len(resumo))
-    ax.plot(
-        posicoes,
-        resumo["median"],
-        marker="o",
-        color="#4C72B0",
-        linewidth=2,
-    )
-    ax.axhline(0, color="black", linestyle="--", linewidth=1, label="Beta = 0")
+    if not resumo_completo:
+        print("Interpretação: nenhuma associação com beta numérico e rs_id informado.")
+        return
 
-    for posicao, (_, linha) in zip(posicoes, resumo.iterrows()):
-        ax.annotate(
-            f"n={int(linha['count'])}",
-            (posicao, linha["median"]),
-            textcoords="offset points",
-            xytext=(0, 8),
-            ha="center",
+    resumo = resumo_completo[:top_n]
+    rs_ids = [linha[0] for linha in resumo]
+    medias = [linha[1] for linha in resumo]
+    contagens = [linha[2] for linha in resumo]
+    cores = ["#4C72B0" if media >= 0 else "#c44" for media in medias]
+
+    fig, ax = plt.subplots(figsize=(10, 7))
+    posicoes = list(range(len(resumo)))
+    barras = ax.barh(posicoes, medias, color=cores)
+
+    for barra, media, n in zip(barras, medias, contagens):
+        ax.text(
+            media,
+            barra.get_y() + barra.get_height() / 2,
+            f" {media:+.3f} (n={n})",
+            va="center",
+            ha="left" if media >= 0 else "right",
             fontsize=8,
         )
 
-    ax.set_xticks(list(posicoes))
-    ax.set_xticklabels(resumo.index.astype(str))
-    ax.set_title("Beta mediano por cromossomo")
-    ax.set_xlabel("Cromossomo")
-    ax.set_ylabel("Beta mediano")
+    ax.axvline(0, color="black", linestyle="--", linewidth=1)
+    ax.set_xscale("symlog", linthresh=0.01)
+    ax.set_yticks(posicoes)
+    ax.set_yticklabels(rs_ids)
+    ax.invert_yaxis()
+    ax.set_title(ROTULOS_GRAFICO_3["titulo"])
+    ax.set_xlabel(ROTULOS_GRAFICO_3["xlabel"])
+    ax.set_ylabel(ROTULOS_GRAFICO_3["ylabel"])
     ax.text(
         0.99,
         0.05,
-        "increase = positivo\ndecrease = negativo",
+        "azul = increase · vermelho = decrease\nsymlog (linthresh=0.01)",
         transform=ax.transAxes,
         ha="right",
         va="bottom",
         fontsize=9,
         bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor="gray"),
     )
-    ax.legend()
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     fig.tight_layout()
 
-    _salvar_grafico(fig, "03_beta_por_cromossomo.png")
+    _salvar_grafico(fig, "03_beta_por_allele.png")
 
-    cromossomo_maior = resumo["median"].abs().idxmax()
+    rs_id_top, media_top, n_top = resumo_completo[0]
     print(
-        f"Interpretação: {len(dados)} associações com beta numérico em "
-        f"{len(resumo)} cromossomos. O maior beta mediano absoluto está no "
-        f"cromossomo {cromossomo_maior} "
-        f"({resumo.loc[cromossomo_maior, 'median']:.3f})."
+        f"Interpretação: {sum(n for _, _, n in resumo_completo)} associações com "
+        f"beta numérico em {len(resumo_completo)} rs_ids distintos. Maior |média|: "
+        f"{rs_id_top} ({media_top:+.3f}, n={n_top}). Ordenação por |média|; "
+        "o sinal indica increase/decrease conforme o alelo reportado."
     )
 
 
@@ -498,14 +503,13 @@ def etapa_3(df):
 
     grafico_cromossomos(df)
     grafico_genes(df)
-    grafico_beta_cromossomo(df)
+    grafico_beta_allele(df)
     grafico_beta_boxplot_cromossomo(df)
 
 
 if __name__ == "__main__":
     df = etapa_1()
-    print(df.loc[:, ['association_id', 'beta', 'p_value', 'accession_id', 'locations', 'mapped_genes', 'snp_effect_allele',
-       'snp_allele', 'ci_lower', 'ci_upper', 'or_per_copy_num', 'or_value', '_mapped_genes', '_allele', '_cromossome']][df['beta'] != '-'])
+    print(df.head())
     df = etapa_2(df)
     etapa_3(df)
 
